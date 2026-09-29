@@ -4,7 +4,7 @@ from actorio_cli.commands._common import run_export, run_search
 from actorio_cli.commands._filters import build_params
 
 amazon_app = typer.Typer(
-    help="Amazon Flip: cross-marketplace Amazon-to-Amazon arbitrage",
+    help="Amazon Flip: cross-marketplace Amazon-to-Amazon arbitrage (search and export)",
     no_args_is_help=True,
 )
 
@@ -90,8 +90,18 @@ def search(
     sort: str = p.SORT,
     limit: int = typer.Option(None, help="Results per request (server default: 20, max 100)"),
     offset: int = typer.Option(0, help="Skip this many results"),
-    as_json: bool = typer.Option(False, "--json"),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Output raw JSON ({results, pagination}) instead of a table; "
+             "page with --offset/--limit while pagination.has_more is true",
+    ),
 ):
+    """Search Amazon Flip listings.
+
+    For CSV/XLSX files use `actorio amazon export` — same filters, costs
+    more credits than a search.
+    """
     params = _collect_amazon(
         query, store, upc_list, asin_list, price_min, price_max, marketplace,
         price_reference, last_update, missing_fba, multipack, size, category,
@@ -135,9 +145,9 @@ def export(
     sales_month_logic: str = p.SALES_MONTH_LOGIC,
     sort: str = p.SORT,
     export_format: str = typer.Option("csv", "--format", help="csv or xlsx"),
-    output: str = typer.Option(None, "--output", "-o", help="Output file path"),
+    output: str = typer.Option(None, "--output", "-o", help="Output file path (default: server-suggested filename)"),
 ):
-    """Export Amazon flips (up to 2500 rows), like the web export button."""
+    """Export Amazon flips (up to 2500 rows), like the web export button. Costs more credits than a search."""
     params = _collect_amazon(
         query, store, upc_list, asin_list, price_min, price_max, marketplace,
         price_reference, last_update, missing_fba, multipack, size, category,

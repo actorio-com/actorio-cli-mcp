@@ -1,8 +1,8 @@
 import typer
 from actorio_cli.commands._common import run_export, run_search
-from actorio_cli.commands._filters import build_params
+from actorio_cli.commands._filters import LOGIC_HELP, build_params
 
-products_app = typer.Typer(help="Product search", no_args_is_help=True)
+products_app = typer.Typer(help="Product catalog search and export", no_args_is_help=True)
 
 
 def _collect(
@@ -73,21 +73,21 @@ SUPPRESSED_BUYBOX = typer.Option(False, "--suppressed-buybox", help="Include sup
 SIZE = typer.Option(None, help="Size category code, e.g. SML_PAR (repeatable)")
 CATEGORY = typer.Option(None, help="Amazon category code (repeatable)")
 SIMILARITY = typer.Option(None, help="Match similarity level (0-3)")
-COMPETITIVE_PRICE_MIN = typer.Option(None, "--competitive-price-min")
-COMPETITIVE_PRICE_MAX = typer.Option(None, "--competitive-price-max")
-COMPETITIVE_PRICE_LOGIC = typer.Option(None, "--competitive-price-logic", help="'all' = ALL marketplaces; blank = ANY")
-PROFIT_MIN = typer.Option(None, "--profit-min")
-PROFIT_MAX = typer.Option(None, "--profit-max")
-PROFIT_LOGIC = typer.Option(None, "--profit-logic", help="'all' = ALL marketplaces; blank = ANY")
-ROI_MIN = typer.Option(None, "--roi-min")
-ROI_MAX = typer.Option(None, "--roi-max")
-ROI_LOGIC = typer.Option(None, "--roi-logic", help="'all' = ALL marketplaces; blank = ANY")
-PROFIT_MONTH_MIN = typer.Option(None, "--profit-month-min")
-PROFIT_MONTH_MAX = typer.Option(None, "--profit-month-max")
-PROFIT_MONTH_LOGIC = typer.Option(None, "--profit-month-logic", help="'all' = ALL marketplaces; blank = ANY")
-SALES_MONTH_MIN = typer.Option(None, "--sales-month-min")
-SALES_MONTH_MAX = typer.Option(None, "--sales-month-max")
-SALES_MONTH_LOGIC = typer.Option(None, "--sales-month-logic", help="'all' = ALL marketplaces; blank = ANY")
+COMPETITIVE_PRICE_MIN = typer.Option(None, "--competitive-price-min", help="Min competitive price (EUR)")
+COMPETITIVE_PRICE_MAX = typer.Option(None, "--competitive-price-max", help="Max competitive price (EUR)")
+COMPETITIVE_PRICE_LOGIC = typer.Option(None, "--competitive-price-logic", help=LOGIC_HELP)
+PROFIT_MIN = typer.Option(None, "--profit-min", help="Min unit profit (EUR)")
+PROFIT_MAX = typer.Option(None, "--profit-max", help="Max unit profit (EUR)")
+PROFIT_LOGIC = typer.Option(None, "--profit-logic", help=LOGIC_HELP)
+ROI_MIN = typer.Option(None, "--roi-min", help="Min unit ROI (%)")
+ROI_MAX = typer.Option(None, "--roi-max", help="Max unit ROI (%)")
+ROI_LOGIC = typer.Option(None, "--roi-logic", help=LOGIC_HELP)
+PROFIT_MONTH_MIN = typer.Option(None, "--profit-month-min", help="Min monthly profit (EUR)")
+PROFIT_MONTH_MAX = typer.Option(None, "--profit-month-max", help="Max monthly profit (EUR)")
+PROFIT_MONTH_LOGIC = typer.Option(None, "--profit-month-logic", help=LOGIC_HELP)
+SALES_MONTH_MIN = typer.Option(None, "--sales-month-min", help="Min monthly sales")
+SALES_MONTH_MAX = typer.Option(None, "--sales-month-max", help="Max monthly sales")
+SALES_MONTH_LOGIC = typer.Option(None, "--sales-month-logic", help=LOGIC_HELP)
 SORT = typer.Option(None, help="Sort key, e.g. profit, -profit, identifiers")
 
 
@@ -130,8 +130,18 @@ def search(
     sort: str = SORT,
     limit: int = typer.Option(None, help="Results per request (server default: 20, max 100)"),
     offset: int = typer.Option(0, help="Skip this many results"),
-    as_json: bool = typer.Option(False, "--json", help="Output raw JSON"),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Output raw JSON ({results, pagination}) instead of a table; "
+             "page with --offset/--limit while pagination.has_more is true",
+    ),
 ):
+    """Search the product catalog.
+
+    For CSV/XLSX files use `actorio products export` — same filters, costs
+    more credits than a search.
+    """
     params = _collect(
         query, country, type_, store, upc_list, asin_list, price_min, price_max,
         marketplace, price_reference, last_update, missing_fba, multipack,
@@ -182,9 +192,9 @@ def export(
     sales_month_logic: str = SALES_MONTH_LOGIC,
     sort: str = SORT,
     export_format: str = typer.Option("csv", "--format", help="csv or xlsx"),
-    output: str = typer.Option(None, "--output", "-o", help="Output file path"),
+    output: str = typer.Option(None, "--output", "-o", help="Output file path (default: server-suggested filename)"),
 ):
-    """Export the full result set (up to 2500 rows) like the web export button."""
+    """Export the full result set (up to 2500 rows) like the web export button. Costs more credits than a search."""
     params = _collect(
         query, country, type_, store, upc_list, asin_list, price_min, price_max,
         marketplace, price_reference, last_update, missing_fba, multipack,

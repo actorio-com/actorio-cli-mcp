@@ -5,7 +5,10 @@ from actorio_cli.commands.favorites import favorites_app
 from actorio_cli.commands.amazon import amazon_app
 from actorio_cli.commands.reverse import reverse_app
 
-app = typer.Typer(help="Actorio CLI", no_args_is_help=True)
+app = typer.Typer(
+    help="Actorio CLI — product search, Amazon Flip, reverse lookup, exports and MCP server",
+    no_args_is_help=True,
+)
 app.command("login")(auth.login)
 app.command("logout")(auth.logout)
 app.command("whoami")(auth.whoami)

@@ -2,7 +2,7 @@ import typer
 from actorio_cli.commands import products as p
 from actorio_cli.commands._common import run_export, run_search
 
-favorites_app = typer.Typer(help="Favorites search", no_args_is_help=True)
+favorites_app = typer.Typer(help="Favorites search and export", no_args_is_help=True)
 
 
 @favorites_app.command("search")
@@ -44,8 +44,18 @@ def search(
     sort: str = p.SORT,
     limit: int = typer.Option(None, help="Results per request (server default: 20, max 100)"),
     offset: int = typer.Option(0, help="Skip this many results"),
-    as_json: bool = typer.Option(False, "--json"),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Output raw JSON ({results, pagination}) instead of a table; "
+             "page with --offset/--limit while pagination.has_more is true",
+    ),
 ):
+    """Search your saved favorites.
+
+    For CSV/XLSX files use `actorio favorites export` — costs more credits
+    than a search.
+    """
     params = p._collect(
         query, country, type_, store, upc_list, asin_list, price_min, price_max,
         marketplace, price_reference, last_update, missing_fba, multipack,
@@ -66,9 +76,9 @@ def export(
     upc_list: str = p.UPC_LIST,
     asin_list: str = p.ASIN_LIST,
     export_format: str = typer.Option("csv", "--format", help="csv or xlsx"),
-    output: str = typer.Option(None, "--output", "-o", help="Output file path"),
+    output: str = typer.Option(None, "--output", "-o", help="Output file path (default: server-suggested filename)"),
 ):
-    """Export your favorites (up to 2500 rows)."""
+    """Export your favorites (up to 2500 rows). Costs more credits than a search."""
     params: dict = {}
     if query:
         params["keywords"] = query

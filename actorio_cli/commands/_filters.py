@@ -43,5 +43,6 @@ def build_params(**values) -> dict:
     return params
 
 
-RANGE_HELP = "Webapp-equivalent filter; combine _min/_max as needed"
+# Shared help text for the *_logic flags (declared in products.py and reused
+# by favorites/amazon).
 LOGIC_HELP = "Blank = ANY marketplace, 'all' = ALL marketplaces"

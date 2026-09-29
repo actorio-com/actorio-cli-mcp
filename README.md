@@ -57,7 +57,7 @@ returns every field the backend has for each row.
 - `actorio login --base-url URL [--label LABEL]` — start the device-code
   login flow and store the issued token.
   ```bash
-  actorio login --base-url https://actorio.example --label laptop
+  actorio login --base-url https://api.actorio.com --label laptop
   ```
 - `actorio logout` — delete the local config file.
   ```bash
