@@ -1,0 +1,757 @@
+<title>Connect Actorio to ChatGPT</title>
+<style>
+  :root {
+    --paper: #eef2f1;
+    --surface: #ffffff;
+    --surface-2: #e4ebe9;
+    --ink: #142420;
+    --ink-muted: #4b615c;
+    --ink-faint: #7c8f8a;
+    --accent: #c85a26;
+    --accent-strong: #a8461a;
+    --accent-wash: #f7e4d8;
+    --success: #2f7a52;
+    --success-wash: #e1f0e6;
+    --line: #d3dcd9;
+    --code-bg: #14261f;
+    --code-ink: #dfe9e4;
+    --code-accent: #f0955c;
+    --shadow: 0 1px 2px rgba(20, 36, 32, 0.06), 0 8px 24px -12px rgba(20, 36, 32, 0.18);
+
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0f211d;
+      --surface: #16302a;
+      --surface-2: #1c3a32;
+      --ink: #e9f0ed;
+      --ink-muted: #a3bab3;
+      --ink-faint: #74897f;
+      --accent: #ef9057;
+      --accent-strong: #f5ab7d;
+      --accent-wash: #2c2318;
+      --success: #6fc192;
+      --success-wash: #163524;
+      --line: #26443c;
+      --code-bg: #0b1815;
+      --code-ink: #dfe9e4;
+      --code-accent: #f0a06a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -14px rgba(0, 0, 0, 0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0f211d;
+    --surface: #16302a;
+    --surface-2: #1c3a32;
+    --ink: #e9f0ed;
+    --ink-muted: #a3bab3;
+    --ink-faint: #74897f;
+    --accent: #ef9057;
+    --accent-strong: #f5ab7d;
+    --accent-wash: #2c2318;
+    --success: #6fc192;
+    --success-wash: #163524;
+    --line: #26443c;
+    --code-bg: #0b1815;
+    --code-ink: #dfe9e4;
+    --code-accent: #f0a06a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px -14px rgba(0, 0, 0, 0.55);
+  }
+  :root[data-theme="light"] {
+    --paper: #eef2f1;
+    --surface: #ffffff;
+    --surface-2: #e4ebe9;
+    --ink: #142420;
+    --ink-muted: #4b615c;
+    --ink-faint: #7c8f8a;
+    --accent: #c85a26;
+    --accent-strong: #a8461a;
+    --accent-wash: #f7e4d8;
+    --success: #2f7a52;
+    --success-wash: #e1f0e6;
+    --line: #d3dcd9;
+    --code-bg: #14261f;
+    --code-ink: #dfe9e4;
+    --code-accent: #f0955c;
+    --shadow: 0 1px 2px rgba(20, 36, 32, 0.06), 0 8px 24px -12px rgba(20, 36, 32, 0.18);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    overflow-x: hidden;
+  }
+  a { color: var(--accent-strong); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  /* ---------- header ---------- */
+  .masthead {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 40px;
+  }
+  .emblem { flex: none; }
+  .emblem circle.node { fill: var(--surface); stroke: var(--ink-faint); stroke-width: 1.5; }
+  .emblem circle.node.right { stroke: var(--accent); }
+  .emblem circle.pulse { fill: var(--accent); }
+  .emblem line { stroke: var(--ink-faint); stroke-width: 1.5; stroke-dasharray: 3 4; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(28px, 4.4vw, 38px);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink-muted);
+    max-width: 62ch;
+    margin: 20px 0 0;
+  }
+
+  /* ---------- overview ---------- */
+  .overview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 40px 0 64px;
+  }
+  .overview > div {
+    background: var(--surface);
+    padding: 24px 26px;
+  }
+  .overview h2 {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+  .overview ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .overview li {
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+    padding-left: 20px;
+    position: relative;
+  }
+  .overview li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .overview .can li::before { background: var(--accent); }
+  .overview .need li::before { background: var(--ink-faint); }
+
+  /* ---------- steps ---------- */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 20px;
+    padding: 40px 0;
+    border-top: 1px solid var(--line);
+  }
+  .step:first-child { border-top: none; padding-top: 0; }
+
+  .step-num {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    line-height: 1;
+    padding-top: 2px;
+  }
+
+  .step h3 {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 600;
+    margin: 0 0 10px;
+    text-wrap: balance;
+  }
+  .step p { font-size: 15px; line-height: 1.65; color: var(--ink-muted); margin: 0 0 12px; }
+  .step ol.substeps {
+    margin: 0 0 16px;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .step ol.substeps li { font-size: 15px; line-height: 1.55; }
+  .step ol.substeps li::marker { color: var(--ink-faint); font-family: var(--font-mono); font-size: 13px; }
+
+  .path { font-family: var(--font-mono); font-size: 13.5px; background: var(--surface-2); padding: 2px 6px; border-radius: 4px; }
+
+  .codeblock {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 4px 0 16px;
+  }
+  .codeblock .k { color: var(--code-accent); }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-wash);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink);
+    margin: 4px 0 16px;
+  }
+  .callout strong { color: var(--accent-strong); }
+
+  /* ---------- mockups ---------- */
+  .mock {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-top: 16px;
+  }
+  .mock-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 12px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .mock-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint); opacity: 0.5; }
+  .mock-bar .label {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    margin-left: 6px;
+  }
+  .mock-body { padding: 18px 20px; }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+  .toggle-row + .toggle-row { border-top: 1px solid var(--line); }
+  .toggle-row .t-label { font-size: 14px; }
+  .toggle-row .t-sub { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+  .switch { width: 34px; height: 19px; border-radius: 10px; background: var(--line); position: relative; flex: none; }
+  .switch.on { background: var(--accent); }
+  .switch::after {
+    content: "";
+    position: absolute; top: 2px; left: 2px;
+    width: 15px; height: 15px; border-radius: 50%;
+    background: var(--surface);
+    transition: left .15s;
+  }
+  .switch.on::after { left: 17px; }
+
+  .field-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field-row label { font-size: 12px; color: var(--ink-faint); font-family: var(--font-mono); letter-spacing: 0.03em; }
+  .field-box {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .consent-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    background: var(--paper);
+  }
+  .consent-card .app-line { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .consent-card .app-dot {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--accent); flex: none;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  }
+  .consent-card h4 { margin: 0; font-size: 15px; }
+  .consent-card p { font-size: 13.5px; line-height: 1.55; color: var(--ink-muted); margin: 0 0 14px; }
+  .credit-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 12px;
+    background: var(--success-wash); color: var(--success);
+    padding: 5px 10px; border-radius: 20px; margin-bottom: 16px;
+  }
+  .credit-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  .btn-row { display: flex; gap: 10px; }
+  .btn {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 18px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: default;
+  }
+  .btn.approve { background: var(--accent); color: #fff; }
+  .btn.deny { background: transparent; border-color: var(--line); color: var(--ink-muted); }
+
+  .status-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 0;
+  }
+  .status-row .name { font-weight: 600; font-size: 14.5px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 11.5px;
+    background: var(--success-wash); color: var(--success);
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .status-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+  .bubble {
+    max-width: 86%;
+    background: var(--surface-2);
+    border-radius: 14px 14px 14px 3px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .bubble.mine {
+    margin-left: auto;
+    border-radius: 14px 14px 3px 14px;
+    background: var(--accent-wash);
+    color: var(--ink);
+  }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .tool-row {
+    background: var(--surface);
+    padding: 10px 14px;
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .tool-row code { font-family: var(--font-mono); font-size: 12.5px; color: var(--accent-strong); }
+  .tool-row span { font-size: 13px; color: var(--ink-muted); }
+
+  /* ---------- disconnect / billing / security ---------- */
+  .section {
+    padding: 40px 0;
+    border-top: 1px solid var(--line);
+  }
+  .section h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .section p { font-size: 15px; line-height: 1.65; color: var(--ink-muted); margin: 0 0 12px; }
+
+  .disconnect-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .disc-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    background: var(--surface);
+  }
+  .disc-card .num { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); letter-spacing: 0.08em; }
+  .disc-card h4 { font-family: var(--font-display); font-size: 15.5px; margin: 6px 0 8px; }
+  .disc-card p { font-size: 13.5px; margin: 0; }
+
+  .billing-strip {
+    display: flex;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 18px;
+  }
+  .billing-strip > div {
+    flex: 1;
+    background: var(--surface);
+    padding: 16px 18px;
+    text-align: center;
+  }
+  .billing-strip .n {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--accent-strong);
+    font-variant-numeric: tabular-nums;
+  }
+  .billing-strip .l { font-size: 12.5px; color: var(--ink-faint); margin-top: 2px; }
+
+  /* ---------- faq ---------- */
+  .faq-item {
+    border-top: 1px solid var(--line);
+    padding: 16px 0;
+  }
+  .faq-item summary {
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after {
+    content: "+";
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: var(--ink-faint);
+    flex: none;
+  }
+  .faq-item[open] summary::after { content: "–"; }
+  .faq-item .a { font-size: 14.5px; line-height: 1.6; color: var(--ink-muted); margin: 10px 0 0; }
+  .faq-item .a code { font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 620px) {
+    .page { padding: 40px 18px 72px; }
+    .overview { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 40px 1fr; gap: 14px; }
+    .step-num { font-size: 26px; }
+    .disconnect-options { grid-template-columns: 1fr; }
+    .billing-strip { flex-direction: column; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .switch::after { transition: none; }
+  }
+</style>
+
+<div class="page">
+
+  <div class="masthead">
+    <svg class="emblem" width="52" height="32" viewBox="0 0 52 32" aria-hidden="true">
+      <line x1="10" y1="16" x2="42" y2="16"></line>
+      <circle class="node" cx="10" cy="16" r="8"></circle>
+      <circle class="node right" cx="42" cy="16" r="8"></circle>
+      <circle class="pulse" cx="26" cy="16" r="2.5"></circle>
+    </svg>
+    <div>
+      <p class="eyebrow">Setup guide</p>
+      <h1>Connect Actorio to ChatGPT</h1>
+    </div>
+  </div>
+
+  <p class="lede">
+    Once connected, you can ask ChatGPT to search Actorio's product index and run
+    exports for you — directly in the chat. Every request runs against
+    <strong>your own</strong> Actorio plan and credit balance. Takes about five minutes.
+  </p>
+
+  <div class="overview">
+    <div class="can">
+      <h2>What you'll be able to do</h2>
+      <ul>
+        <li>Search Actorio's full product index across DE, ES, FR, GB and IT, with every filter the web app has</li>
+        <li>Run Amazon Flip cross-marketplace searches</li>
+        <li>Export a full result set as an Excel file, right into the chat</li>
+        <li>Check your credit balance without leaving ChatGPT</li>
+      </ul>
+    </div>
+    <div class="need">
+      <h2>Before you start</h2>
+      <ul>
+        <li>A ChatGPT plan that supports custom connectors — Plus, Pro, Business, Enterprise or Edu</li>
+        <li>An active Actorio account and plan</li>
+        <li>Five minutes, and this page</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <h3>Turn on Developer mode</h3>
+        <p>Custom connectors live behind a setting most people never need. In ChatGPT:</p>
+        <ol class="substeps">
+          <li>Open <span class="path">Settings → Security and login</span></li>
+          <li>Turn on <strong>Developer mode</strong></li>
+        </ol>
+        <div class="callout">
+          On a Business, Enterprise or Edu workspace, an admin may need to enable
+          this first, under <strong>Workspace Settings → Permissions &amp; Roles → Connected Data</strong>.
+        </div>
+        <div class="mock">
+          <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="label">Settings — Security and login</span></div>
+          <div class="mock-body">
+            <div class="toggle-row">
+              <div><div class="t-label">Two-factor authentication</div></div>
+              <div class="switch"></div>
+            </div>
+            <div class="toggle-row">
+              <div><div class="t-label">Developer mode</div><div class="t-sub">Required for custom connectors</div></div>
+              <div class="switch on"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <h3>Add the Actorio connector</h3>
+        <ol class="substeps">
+          <li>Go to <span class="path">Settings → Plugins</span> <em>(this used to be called Connectors, then Apps — same feature)</em></li>
+          <li>Choose <strong>Add custom connector</strong></li>
+          <li>Paste in the connector address</li>
+        </ol>
+        <div class="codeblock">https://mcp.actorio.com/mcp</div>
+        <p>Leave the authentication method set to <strong>OAuth</strong> — Actorio handles the rest from here.</p>
+        <div class="mock">
+          <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="label">Add custom connector</span></div>
+          <div class="mock-body">
+            <div class="field-row">
+              <label>MCP SERVER URL</label>
+              <div class="field-box">https://mcp.actorio.com/mcp</div>
+            </div>
+            <div class="field-row">
+              <label>AUTHENTICATION</label>
+              <div class="field-box">OAuth</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <h3>Log in and review access</h3>
+        <p>ChatGPT opens Actorio's login page in a new tab.</p>
+        <ol class="substeps">
+          <li>Log in the way you normally would (already signed in to Actorio elsewhere in the same browser? you'll skip straight to the next screen)</li>
+          <li>Review what access you're granting</li>
+          <li>Select <strong>Approve</strong></li>
+        </ol>
+        <div class="callout">
+          Only approve a connection <strong>you</strong> started. If this screen shows up
+          unprompted, or you don't recognize the app asking, choose Deny.
+        </div>
+        <div class="mock">
+          <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="label">app.actorio.com/cli/v1/oauth/consent</span></div>
+          <div class="mock-body">
+            <div class="consent-card">
+              <div class="app-line">
+                <div class="app-dot">C</div>
+                <h4>Authorize ChatGPT</h4>
+              </div>
+              <p>ChatGPT wants to access your Actorio account — it will be able to run
+                product searches and exports on your behalf, using your own credit
+                balance and plan.</p>
+              <div class="credit-pill">1,847 credits available · Growth plan</div>
+              <div class="btn-row">
+                <div class="btn approve">Approve</div>
+                <div class="btn deny">Deny</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div>
+        <h3>You're connected</h3>
+        <p>
+          ChatGPT redirects you back automatically. From here on, every search or
+          export you run through it draws on your own Actorio plan and credits —
+          never anyone else's, and never the reverse.
+        </p>
+        <div class="mock">
+          <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="label">Settings — Plugins</span></div>
+          <div class="mock-body">
+            <div class="status-row">
+              <span class="name">Actorio</span>
+              <span class="status-pill">Connected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div>
+        <h3>Put it to work</h3>
+        <p>Just ask, in plain language:</p>
+        <div class="mock">
+          <div class="mock-bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="label">ChatGPT</span></div>
+          <div class="mock-body">
+            <div class="bubble mine">Find Lego sets on Actorio with at least 20% ROI in Germany</div>
+            <div class="bubble">Found 41 matches. Want the full set as an Excel file?</div>
+            <div class="bubble mine">Yes — export it</div>
+          </div>
+        </div>
+        <p style="margin-top: 18px;">Mentioning <em>export</em> or <em>download</em> explicitly is what tells ChatGPT
+          to hand you a real file rather than a summary table. The full set of tools it can reach:</p>
+        <div class="tool-grid">
+          <div class="tool-row"><code>search_products</code><span>Full catalog search, every filter the web app has</span></div>
+          <div class="tool-row"><code>search_favorites</code><span>Search your saved favorites</span></div>
+          <div class="tool-row"><code>search_amazon</code><span>Amazon-to-Amazon cross-marketplace flips</span></div>
+          <div class="tool-row"><code>reverse_lookup</code><span>Check specific ASINs for a supplier match</span></div>
+          <div class="tool-row"><code>export_results</code><span>Full result set as an Excel or CSV file</span></div>
+          <div class="tool-row"><code>get_usage</code><span>Your current credit balance and plan</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <h2>Managing the connection</h2>
+    <p>You can end this connection from either side, at any time — access stops immediately, and the very next request is rejected.</p>
+    <div class="disconnect-options">
+      <div class="disc-card">
+        <div class="num">FROM ACTORIO</div>
+        <h4>Connected Apps</h4>
+        <p>Visit your <a href="#">Connected Apps</a> page in your Actorio account and select Disconnect next to ChatGPT.</p>
+      </div>
+      <div class="disc-card">
+        <div class="num">FROM CHATGPT</div>
+        <h4>Remove the connector</h4>
+        <p>Remove Actorio from ChatGPT's own connector settings — Actorio is notified and revokes access on its end too.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Credits and billing</h2>
+    <p>Pricing is identical to the Actorio web app and CLI — nothing extra for using ChatGPT.</p>
+    <div class="billing-strip">
+      <div><div class="n">1</div><div class="l">credit per search</div></div>
+      <div><div class="n">5</div><div class="l">credits per export</div></div>
+      <div><div class="n">0</div><div class="l">extra cost to connect</div></div>
+    </div>
+    <p style="margin-top: 18px;">Every charge comes from your own monthly allowance or credit pack. Ask ChatGPT
+      "what's my Actorio usage?" at any time, or check it directly in your Actorio account.</p>
+  </div>
+
+  <div class="section">
+    <h2>What Actorio can and can't see</h2>
+    <p>Actorio only ever sees the specific search or export request you make through this connector — never the rest of your ChatGPT conversation.</p>
+    <p>Your Actorio password is never shared with ChatGPT. You type it once, on Actorio's own login page, during setup.</p>
+  </div>
+
+  <div class="section">
+    <h2>Troubleshooting</h2>
+
+    <details class="faq-item">
+      <summary>I don't see Developer mode in Settings</summary>
+      <p class="a">Custom connectors aren't available on ChatGPT's Free tier — you'll need Plus or above. On Business/Enterprise/Edu, it may be a workspace admin setting instead.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>It says "Error fetching OAuth configuration"</summary>
+      <p class="a">This shouldn't happen on a normal connection attempt. Try removing the connector and adding it again with the exact address <code>https://mcp.actorio.com/mcp</code> — if it persists, contact Actorio support.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>ChatGPT searched, but didn't offer me a file to download</summary>
+      <p class="a">Ask for it directly — "export these" or "download as Excel." Without that, ChatGPT will often just show a summary table instead of running the export tool.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>My credit balance looks out of date</summary>
+      <p class="a">Ask ChatGPT to check your Actorio usage again, or refresh the usage page directly in your account — balances sync in real time, so this is almost always a stale reply rather than a stale balance.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>I approved the connection but nothing happened</summary>
+      <p class="a">Make sure the browser tab actually redirected back to ChatGPT before closing it. If it seems stuck, remove the connector and start again from Step 2.</p>
+    </details>
+  </div>
+
+  <footer>
+    Need a hand? Contact Actorio support, or see the full CLI &amp; API docs at docs.actorio.com/cli.
+  </footer>
+
+</div>
