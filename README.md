@@ -5,23 +5,21 @@ same search endpoints the web UI uses (products, favorites, Amazon, reverse
 lookup) and exposes them both as interactive CLI commands and as tools for AI
 assistants via the Model Context Protocol.
 
-## Not published to PyPI
-
-**actorio-cli is not available on PyPI.** v1 is distributed directly from the
-repository. Do not expect `pip install actorio-cli` to work.
-
 ## Install
 
-End users (once access is permitted) install with pipx from the repo:
+Install from PyPI — pipx is recommended so the `actorio` entry point gets an
+isolated environment:
 
 ```bash
-pipx install "git+https://github.com/actorio-com/actorio-cli-mcp.git"
+pipx install actorio-cli
+# or, if you prefer a plain pip install into your environment:
+pip install actorio-cli
 ```
 
 For development against a local checkout:
 
 ```bash
-pip install -e .
+pip install -e ".[test]"
 ```
 
 Both methods install the `actorio` entry point on your `PATH`.
@@ -31,7 +29,8 @@ Both methods install the `actorio` entry point on your `PATH`.
 Log in once per machine using the device-code flow:
 
 ```bash
-actorio login --base-url https://actorio.example
+actorio login --base-url https://api.actorio.com
+```
 ```
 
 The CLI prints a short user code and a verification URL. Open the URL in a
