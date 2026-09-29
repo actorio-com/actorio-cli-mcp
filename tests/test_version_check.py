@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from unittest.mock import patch
 from typer.testing import CliRunner
@@ -115,7 +117,10 @@ def test_version_flag(monkeypatch, isolated_config_path):
 def test_bare_invocation_shows_help(monkeypatch, isolated_config_path):
     result = runner.invoke(app, [])
     assert result.exit_code == 0
-    assert result.output.strip().startswith("Usage:")
+    # typer renders the help via Rich panels when rich is importable, so the
+    # output carries ANSI escapes on some terminals (CI) and not others.
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output).strip()
+    assert plain.startswith("Usage:")
 
 
 @pytest.mark.parametrize(
