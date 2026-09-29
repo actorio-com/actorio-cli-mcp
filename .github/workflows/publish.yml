@@ -8,7 +8,6 @@ name: Publish
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
 
 jobs:
@@ -30,7 +29,7 @@ jobs:
           path: dist/
 
   publish-test-pypi:
-    name: Publish to TestPyPI (every main push)
+    name: Publish to TestPyPI
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -45,8 +44,7 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
 
   publish-pypi:
-    name: Publish to PyPI (on version tags)
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
     permissions:
