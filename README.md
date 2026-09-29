@@ -24,6 +24,21 @@ pip install -e ".[test]"
 
 Both methods install the `actorio` entry point on your `PATH`.
 
+## Updates
+
+The CLI checks PyPI for a newer release once a day (in the background, so it
+never slows a command down) and prints an upgrade notice to stderr:
+
+```
+A new version of actorio-cli is available: 0.2.0 (installed: 0.1.0).
+Run `pipx upgrade actorio-cli` to update.
+```
+
+The notice never touches stdout, so `--json` pipelines stay clean, and it is
+disabled while running `actorio mcp`. Skip the check entirely with
+`ACTORIO_NO_VERSION_CHECK=1` (useful in CI). `actorio --version` shows the
+installed version.
+
 ## Authentication
 
 Log in once per machine using the device-code flow:

@@ -4,10 +4,13 @@ from actorio_cli.commands.products import products_app
 from actorio_cli.commands.favorites import favorites_app
 from actorio_cli.commands.amazon import amazon_app
 from actorio_cli.commands.reverse import reverse_app
+import actorio_cli.version_check as version_check
 
 app = typer.Typer(
     help="Actorio CLI — product search, Amazon Flip, reverse lookup, exports and MCP server",
-    no_args_is_help=True,
+    # no_args_is_help=False: the callback below shows help for a bare
+    # `actorio`, and also needs to run so `--version` works.
+    no_args_is_help=False,
 )
 app.command("login")(auth.login)
 app.command("logout")(auth.logout)
@@ -19,6 +22,30 @@ app.add_typer(products_app, name="products")
 app.add_typer(favorites_app, name="favorites")
 app.add_typer(amazon_app, name="amazon")
 app.add_typer(reverse_app, name="reverse")
+
+
+@app.callback(
+    invoke_without_command=True,
+    result_callback=version_check.finish_version_check,
+)
+def _version_check_hook(
+    ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show the installed version and exit",
+        is_eager=True,
+    ),
+):
+    """(internal) Kick off the background PyPI update check for CLI commands."""
+    if version:
+        typer.echo(version_check.installed_version() or "unknown")
+        raise typer.Exit()
+    if ctx.invoked_subcommand is None:
+        # bare `actorio` — same behavior as no_args_is_help
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+    return version_check.start_version_check(ctx.invoked_subcommand)
 
 @app.command("mcp")
 def mcp_cmd(
