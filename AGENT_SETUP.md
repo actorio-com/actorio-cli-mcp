@@ -34,14 +34,17 @@ actorio --help
 Log in once per machine using the device-code flow. You'll need the base URL
 of the Actorio API instance (your admin will provide this):
 
+> **Note:** `clitest.actorio.com` is a temporary test instance — the base URL
+> will move to the production API (`api.actorio.com`) in the future.
+
 ```bash
-actorio login --base-url https://api.actorio.com
+actorio login --base-url https://clitest.actorio.com
 ```
 
 The CLI prints a short user code and a verification URL:
 
 ```
-Open https://app.actorio.com/cli/device and enter code XXXX-XXXX
+Open https://clitest.actorio.com/cli/v1/auth/cli/authorize and enter code XXXX-XXXX
 Waiting for approval…
 ```
 

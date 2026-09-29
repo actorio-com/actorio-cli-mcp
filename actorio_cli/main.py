@@ -62,7 +62,8 @@ def mcp_cmd(
     ),
     api_base_url: str = typer.Option(
         "http://127.0.0.1:9000", "--api-base-url",
-        help="Where the Actorio Django API lives (e.g. https://app.actorio.com). --http mode has "
+        help="Where the Actorio Django API lives (e.g. https://clitest.actorio.com — a "
+             "temporary test instance; will move to api.actorio.com). --http mode has "
              "no per-user config file — every caller's OAuth-verified token is used against this "
              "URL instead.",
     ),

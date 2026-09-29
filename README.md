@@ -41,10 +41,13 @@ installed version.
 
 ## Authentication
 
+> **Note:** `clitest.actorio.com` is a temporary test instance — the base URL
+> will move to the production API (`api.actorio.com`) in the future.
+
 Log in once per machine using the device-code flow:
 
 ```bash
-actorio login --base-url https://api.actorio.com
+actorio login --base-url https://clitest.actorio.com
 ```
 ```
 
@@ -72,7 +75,7 @@ returns every field the backend has for each row.
 - `actorio login --base-url URL [--label LABEL]` — start the device-code
   login flow and store the issued token.
   ```bash
-  actorio login --base-url https://api.actorio.com --label laptop
+  actorio login --base-url https://clitest.actorio.com --label laptop
   ```
 - `actorio logout` — delete the local config file.
   ```bash

@@ -8,7 +8,11 @@ import actorio_cli.config as cfg_module
 
 
 def login(
-    base_url: str = typer.Option(..., "--base-url", help="Actorio API base URL, e.g. https://api.actorio.com"),
+    base_url: str = typer.Option(
+        ..., "--base-url",
+        help="Actorio API base URL, e.g. https://clitest.actorio.com "
+             "(temporary test instance — will move to api.actorio.com)",
+    ),
     label: str = typer.Option(None, "--label", help="Token label; defaults to hostname"),
 ):
     """Authenticate via device-code flow."""
