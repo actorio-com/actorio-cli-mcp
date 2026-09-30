@@ -171,11 +171,11 @@ The most commonly used filters across all search tools:
 | `roi_min` / `roi_max` | number | ROI percentage |
 | `profit_month_min` / `profit_month_max` | number | Estimated monthly profit |
 | `sales_month_min` / `sales_month_max` | number | Estimated monthly sales |
-| `missig_fba` | boolean | Only products without FBA sellers |
-| `hazmat` | boolean | Include hazmat products |
+| `missing_fba` | boolean | Only listings with complete FBA data (excludes incomplete) |
+| `exclude_hazmat` | boolean | Exclude hazmat products |
 | `competitive_price_min` / `competitive_price_max` | number | Compete against current buy box |
 | `last_update` | string | Only recently refreshed: `24` or `48` (hours) |
-| `sort` | string | `profit`, `-profit`, `roi`, `-roi`, `identifiers` |
+| `sort` | string | `profit`, `-profit`, `roi`, `-roi`, `identifiers`, `price`, `last_scan`, `last_update` |
 | `page` | integer | Result page (default 1; fixed page size, matches the web UI) |
 
 Full schemas with all enums and descriptions are embedded in each tool's

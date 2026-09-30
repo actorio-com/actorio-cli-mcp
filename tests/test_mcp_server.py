@@ -340,8 +340,51 @@ async def test_all_tools_have_schemas(isolated_config_path):
     products = next(t for t in TOOLS if t.name == "search_products")
     props = products.inputSchema["properties"]
     for key in ("roi_min", "profit_month_max", "missing_fba", "category", "sort",
-                "export_format"):
+                "export_format", "exclude_multipack", "exclude_variations",
+                "exclude_hazmat", "exclude_suppressed_buybox"):
         assert key in props, f"missing {key}"
+
+
+def test_stdio_tool_descriptions_say_search_costs_credit():
+    """Over stdio the description must not claim searches are free — agents
+    plan credit spend from it, and stdio searches cost 1 credit."""
+    from actorio_cli.mcp_server import TOOLS
+
+    products = next(t for t in TOOLS if t.name == "search_products")
+    assert "FREE" not in products.description
+    assert "1 credit" in products.description
+    favorites = next(t for t in TOOLS if t.name == "search_favorites")
+    assert "FREE" not in favorites.description
+    export_prop = products.inputSchema["properties"]["export_format"]
+    assert "free either way" not in export_prop["description"]
+
+
+def test_http_tool_descriptions_say_search_is_free():
+    """Over HTTP the free aggregate+quote flow is real, so the description
+    keeps the free wording."""
+    from actorio_cli.mcp_server import _build_tools
+
+    tools = _build_tools(free_search=True)
+    products = next(t for t in tools if t.name == "search_products")
+    assert "FREE" in products.description
+    export_prop = products.inputSchema["properties"]["export_format"]
+    assert "free either way" in export_prop["description"]
+
+
+def test_exclude_flag_aliases_map_to_api_params():
+    """exclude_* tool args map to the webapp filterset's param names; the
+    old un-prefixed names still work for backward compatibility."""
+    from actorio_cli.mcp_server import _to_query_params
+
+    assert _to_query_params({"exclude_multipack": True}) == {"multipack": "true"}
+    assert _to_query_params({"multipack": True}) == {"multipack": "true"}
+    assert _to_query_params(
+        {"exclude_variations": True, "exclude_hazmat": True}
+    ) == {"variations": "true", "hazmat": "true"}
+    # prefixed wins over legacy when both are present
+    assert _to_query_params(
+        {"multipack": True, "exclude_multipack": False}
+    ) == {}
 
 
 @pytest.mark.asyncio

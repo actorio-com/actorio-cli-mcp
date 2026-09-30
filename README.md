@@ -129,13 +129,14 @@ Every filter the web UI offers is available as a flag on
 `--upc-list`, `--asin-list`, `--price-min/max` (supplier price VAT
 incl., i.e. the web UI's "Supplier Price" filter), `--marketplace`
 (DE/ES/FR/GB/IT), `--price-reference avg30`, `--last-update 24|48`,
-`--missing-fba`, `--multipack`, `--variations`, `--hazmat`,
-`--suppressed-buybox`, `--size` (repeatable), `--category` (repeatable),
+`--missing-fba` (keep only complete-FBA listings), `--exclude-multipack`,
+`--exclude-variations`, `--exclude-hazmat`, `--exclude-suppressed-buybox`,
+`--size` (repeatable), `--category` (repeatable),
 `--similarity 0-3`, `--competitive-price-min/max`, `--profit-min/max`,
 `--roi-min/max`, `--profit-month-min/max`, `--sales-month-min/max`
 (each range has a `--*-logic all` variant: blank = ANY marketplace,
 `all` = ALL marketplaces), and `--sort` (e.g. `profit`, `-profit`,
-`identifiers`).
+`identifiers`, `price`, `last_scan`, `last_update`).
 
 Plan limits apply exactly as on the web: e.g. filters your plan doesn't
 include are ignored/forced server-side, and product exports require the

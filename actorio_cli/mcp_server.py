@@ -95,8 +95,8 @@ _COMMON_FILTER_PROPS = {
         "enum": ["24", "48"],
         "description": "Only products updated in the last N hours",
     },
-    "missing_fba": {"type": "boolean", "description": "Only listings without FBA sellers"},
-    "multipack": {"type": "boolean", "description": "Include multipack matches"},
+    "missing_fba": {"type": "boolean", "description": "Only listings with complete FBA data (excludes incomplete listings)"},
+    "exclude_multipack": {"type": "boolean", "description": "Exclude multipacks (pack quantity > 1)"},
     "size": {
         "type": "array",
         "items": {"type": "string"},
@@ -107,7 +107,15 @@ _COMMON_FILTER_PROPS = {
         "items": {"type": "string"},
         "description": "Amazon category codes",
     },
-    "sort": {"type": "string", "description": "Sort key, e.g. profit, -profit, identifiers"},
+    "sort": {
+        "type": "string",
+        "description": (
+            "Sort key, e.g. profit, -profit (prefix '-' = descending). "
+            "Valid keys: identifiers, store_image, store_price, price, "
+            "amazon_price, profit, roi, margin, sales_rank, profit_month, "
+            "sales_month, last_scan, last_update."
+        ),
+    },
     **_RANGE_FILTER_PROPS,
 }
 
@@ -124,9 +132,9 @@ _PRODUCTS_FILTER_PROPS = {
         "items": {"type": "string"},
         "description": "Supplier store names",
     },
-    "variations": {"type": "boolean", "description": "Include listings with variations"},
-    "hazmat": {"type": "boolean", "description": "Include hazmat products"},
-    "suppressed_buybox": {"type": "boolean", "description": "Include suppressed-buybox listings"},
+    "exclude_variations": {"type": "boolean", "description": "Exclude listings with variations"},
+    "exclude_hazmat": {"type": "boolean", "description": "Exclude hazmat products"},
+    "exclude_suppressed_buybox": {"type": "boolean", "description": "Exclude suppressed-buybox listings"},
     "similarity": {"type": "integer", "description": "Match similarity level (0-3)"},
 }
 
@@ -163,18 +171,34 @@ _BUY_PROP = {
     },
 }
 
-_EXPORT_FORMAT_PROP = {
-    "export_format": {
-        "type": "string",
-        "enum": ["csv", "xlsx"],
-        "description": (
-            "Format to quote the downloadable file in: 'csv' (default) or "
-            "'xlsx'. Only affects the quote — searching is free either way."
-        ),
-    },
-}
+def _export_format_prop(free_search: bool) -> dict:
+    """The export_format parameter. Over HTTP transport the search itself
+    is free and the quote is the thing the format affects; over stdio the
+    search costs 1 credit and the export is priced by tier — descriptions
+    must match whichever flow the transport actually runs."""
+    quote_text = (
+        "Format to quote the downloadable file in: 'csv' (default) or "
+        "'xlsx'. Only affects the quote — searching is free either way."
+        if free_search
+        else "Format for the downloadable file: 'csv' (default) or 'xlsx'. "
+        "The search itself costs 1 credit; the export costs extra credits "
+        "tiered by row count."
+    )
+    return {
+        "export_format": {
+            "type": "string",
+            "enum": ["csv", "xlsx"],
+            "description": quote_text,
+        },
+    }
 
-_FREE_SEARCH_NOTE = (
+
+# Transport-dependent notes appended to the search-tool descriptions.
+# The free aggregate+quote flow only exists over HTTP (see _tool_handler);
+# over stdio every search is a paid, full-row search — describing it as
+# free would make AI agents mis-plan the user's credit spend.
+
+_FREE_SEARCH_NOTE_HTTP = (
     "This search is FREE and returns no identifiable products: aggregate "
     "figures over all matches, anonymised sample numbers, and a quote saying "
     "how many rows the full list has and what it costs in credits. Report the "
@@ -184,108 +208,140 @@ _FREE_SEARCH_NOTE = (
     "charge credits. Never compose a download URL yourself."
 )
 
-TOOLS: list[Tool] = [
-    Tool(
-        name="search_products",
-        description=(
-            "Search Actorio's product catalog (EU retailers/wholesalers matched "
-            "to Amazon listings with profit/ROI estimates). Supports every filter "
-            "the web UI has. " + _FREE_SEARCH_NOTE
-        ),
-        inputSchema={
-            "type": "object",
-            "properties": {**_PRODUCTS_FILTER_PROPS, **_EXPORT_FORMAT_PROP, **_BUY_PROP, **_PAGINATION_PROPS},
-        },
-        annotations=ToolAnnotations(readOnlyHint=True),
-    ),
-    Tool(
-        name="search_favorites",
-        description=(
-            "Search the current user's favorited products (same filters as "
-            "search_products). " + _FREE_SEARCH_NOTE
-        ),
-        inputSchema={
-            "type": "object",
-            "properties": {**_PRODUCTS_FILTER_PROPS, **_EXPORT_FORMAT_PROP, **_BUY_PROP, **_PAGINATION_PROPS},
-        },
-        annotations=ToolAnnotations(readOnlyHint=True),
-    ),
-    Tool(
-        name="search_amazon",
-        description=(
-            "Amazon Flip search: Amazon-to-Amazon EU arbitrage (buy on one "
-            "marketplace, sell on another) with fees, buybox and profit data. "
-            "Pass export_format='csv' to get a downloadable file alongside "
-            "the summary. " + _CREDITS_NOTE
-        ),
-        inputSchema={
-            "type": "object",
-            "properties": {**_AMAZON_FILTER_PROPS, **_EXPORT_FORMAT_PROP, **_BUY_PROP, **_PAGINATION_PROPS},
-        },
-        annotations=ToolAnnotations(readOnlyHint=True),
-    ),
-    Tool(
-        name="reverse_lookup",
-        description=(
-            "Reverse search: given ASINs, find whether Actorio knows profitable "
-            "supplier matches. Source-store details are intentionally hidden. "
-            "Pass export_format='csv' to get a downloadable file alongside "
-            "the summary. " + _CREDITS_NOTE
-        ),
-        inputSchema={
-            "type": "object",
-            "required": ["asins"],
-            "properties": {**_REVERSE_FILTER_PROPS, **_EXPORT_FORMAT_PROP, **_BUY_PROP, **_PAGINATION_PROPS},
-        },
-        annotations=ToolAnnotations(readOnlyHint=True),
-    ),
-    Tool(
-        name="export_results",
-        description=(
-            "Buy the full result set that a previous search quoted, and get a "
-            "download link for it. CHARGES the user the number of credits the "
-            "quote named — only call this after the user has explicitly agreed "
-            "to that price. The link is the complete list; give it to them. "
-            + _CREDITS_NOTE
-        ),
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "quote_id": {
-                    "type": "string",
-                    "description": "The quote_id from the search you are buying the results of",
-                },
+_FREE_SEARCH_NOTE_STDIO = (
+    "This search costs 1 credit and returns full product rows (up to "
+    "`limit`, default 20; large pages may be truncated by the host). The "
+    "response includes _meta.credits (cost of this call, remaining balance, "
+    "reset date) — report the user's remaining balance along with the "
+    "results. For the complete match set as a spreadsheet, call again with "
+    "the same filters plus export_format='csv' (costs extra credits, tiered "
+    "by row count)."
+)
+
+
+def _build_tools(free_search: bool) -> list[Tool]:
+    search_note = _FREE_SEARCH_NOTE_HTTP if free_search else _FREE_SEARCH_NOTE_STDIO
+    export_format_prop = _export_format_prop(free_search)
+
+    return [
+        Tool(
+            name="search_products",
+            description=(
+                "Search Actorio's product catalog (EU retailers/wholesalers matched "
+                "to Amazon listings with profit/ROI estimates). Supports every filter "
+                "the web UI has. " + search_note
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {**_PRODUCTS_FILTER_PROPS, **export_format_prop, **_BUY_PROP, **_PAGINATION_PROPS},
             },
-            "required": ["quote_id"],
-        },
-        # readOnlyHint=False alone is not enough: per the MCP spec
-        # destructiveHint and openWorldHint both DEFAULT TO TRUE once a tool
-        # is not read-only, so leaving them unset declared this as a
-        # destructive, open-world operation. ChatGPT showed it as
-        # "PUBLIC WRITE / OPEN WORLD / DESTRUCTIVE" and would not let the
-        # model call it. It destroys nothing (it renders a file and charges
-        # credits) and touches only Actorio, so both are false. It is NOT
-        # idempotent: redeeming the same quote twice charges twice.
-        annotations=ToolAnnotations(
-            readOnlyHint=False,
-            destructiveHint=False,
-            idempotentHint=False,
-            openWorldHint=False,
+            annotations=ToolAnnotations(readOnlyHint=True),
         ),
-    ),
-    Tool(
-        name="get_usage",
-        description="Get the user's CLI credit balance, monthly allowance and period reset date.",
-        inputSchema={"type": "object", "properties": {}},
-        annotations=ToolAnnotations(readOnlyHint=True),
-    ),
-]
+        Tool(
+            name="search_favorites",
+            description=(
+                "Search the current user's favorited products (same filters as "
+                "search_products). " + search_note
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {**_PRODUCTS_FILTER_PROPS, **export_format_prop, **_BUY_PROP, **_PAGINATION_PROPS},
+            },
+            annotations=ToolAnnotations(readOnlyHint=True),
+        ),
+        Tool(
+            name="search_amazon",
+            description=(
+                "Amazon Flip search: Amazon-to-Amazon EU arbitrage (buy on one "
+                "marketplace, sell on another) with fees, buybox and profit data. "
+                "Pass export_format='csv' to get a downloadable file alongside "
+                "the summary. " + _CREDITS_NOTE
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {**_AMAZON_FILTER_PROPS, **export_format_prop, **_BUY_PROP, **_PAGINATION_PROPS},
+            },
+            annotations=ToolAnnotations(readOnlyHint=True),
+        ),
+        Tool(
+            name="reverse_lookup",
+            description=(
+                "Reverse search: given ASINs, find whether Actorio knows profitable "
+                "supplier matches. Source-store details are intentionally hidden. "
+                "Pass export_format='csv' to get a downloadable file alongside "
+                "the summary. " + _CREDITS_NOTE
+            ),
+            inputSchema={
+                "type": "object",
+                "required": ["asins"],
+                "properties": {**_REVERSE_FILTER_PROPS, **export_format_prop, **_BUY_PROP, **_PAGINATION_PROPS},
+            },
+            annotations=ToolAnnotations(readOnlyHint=True),
+        ),
+        Tool(
+            name="export_results",
+            description=(
+                "Buy the full result set that a previous search quoted, and get a "
+                "download link for it. CHARGES the user the number of credits the "
+                "quote named — only call this after the user has explicitly agreed "
+                "to that price. The link is the complete list; give it to them. "
+                + _CREDITS_NOTE
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "quote_id": {
+                        "type": "string",
+                        "description": "The quote_id from the search you are buying the results of",
+                    },
+                },
+                "required": ["quote_id"],
+            },
+            # readOnlyHint=False alone is not enough: per the MCP spec
+            # destructiveHint and openWorldHint both DEFAULT TO TRUE once a tool
+            # is not read-only, so leaving them unset declared this as a
+            # destructive, open-world operation. ChatGPT showed it as
+            # "PUBLIC WRITE / OPEN WORLD / DESTRUCTIVE" and would not let the
+            # model call it. It destroys nothing (it renders a file and charges
+            # credits) and touches only Actorio, so both are false. It is NOT
+            # idempotent: redeeming the same quote twice charges twice.
+            annotations=ToolAnnotations(
+                readOnlyHint=False,
+                destructiveHint=False,
+                idempotentHint=False,
+                openWorldHint=False,
+            ),
+        ),
+        Tool(
+            name="get_usage",
+            description="Get the user's CLI credit balance, monthly allowance and period reset date.",
+            inputSchema={"type": "object", "properties": {}},
+            annotations=ToolAnnotations(readOnlyHint=True),
+        ),
+    ]
+
+
+# Module-level stdio variant, kept for imports/tests; `list_tools` builds
+# the transport-correct list at request time.
+TOOLS: list[Tool] = _build_tools(free_search=False)
 
 _KIND_BY_TOOL = {
     "search_products": "products",
     "search_favorites": "favorites",
     "search_amazon": "amazon",
     "reverse_lookup": "reverse",
+}
+
+
+# MCP schema param name → API query param name. The tool schema exposes the
+# filters as what they do ("exclude multipacks"), while the API speaks the
+# webapp filterset's names. The old un-prefixed names still work in
+# arguments for backward compatibility; the prefixed ones win.
+_FLAG_ALIASES = {
+    "exclude_multipack": "multipack",
+    "exclude_variations": "variations",
+    "exclude_hazmat": "hazmat",
+    "exclude_suppressed_buybox": "suppressed_buybox",
 }
 
 
@@ -296,6 +352,9 @@ def _to_query_params(args: dict) -> dict:
         args["keywords"] = args.pop("query")
     if "asins" in args:
         args["asin_list"] = args.pop("asins")
+    for new_key, api_key in _FLAG_ALIASES.items():
+        if new_key in args:
+            args[api_key] = args.pop(new_key)
     return build_params(**args)
 
 
@@ -529,7 +588,11 @@ def make_server() -> Server:
 
     @server.list_tools()
     async def _list() -> list[Tool]:
-        return TOOLS
+        # Tool descriptions are transport-dependent: the free aggregate+quote
+        # flow only exists over HTTP (PUBLIC_BASE_URL set); stdio searches
+        # cost 1 credit and return full rows. Agents plan credit spend from
+        # these descriptions, so they must match the transport they run on.
+        return _build_tools(free_search=PUBLIC_BASE_URL is not None)
 
     @server.call_tool()
     async def _call(name: str, arguments: dict[str, Any]) -> list[TextContent]:

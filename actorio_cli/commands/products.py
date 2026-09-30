@@ -65,11 +65,11 @@ PRICE_MAX = typer.Option(None, "--price-max", help="Max supplier price, VAT incl
 MARKETPLACE = typer.Option(None, help="Target Amazon marketplace: DE, ES, FR, GB, IT")
 PRICE_REFERENCE = typer.Option(None, "--price-reference", help="'avg30' for 30-day average prices")
 LAST_UPDATE = typer.Option(None, "--last-update", help="Only recently updated: 24 or 48 (hours)")
-MISSING_FBA = typer.Option(False, "--missing-fba", help="Only products without FBA sellers")
-MULTIPACK = typer.Option(False, "--multipack", help="Include multipack matches")
-VARIATIONS = typer.Option(False, "--variations", help="Include listings with variations")
-HAZMAT = typer.Option(False, "--hazmat", help="Include hazmat products")
-SUPPRESSED_BUYBOX = typer.Option(False, "--suppressed-buybox", help="Include suppressed-buybox listings")
+MISSING_FBA = typer.Option(False, "--missing-fba", help="Only listings with complete FBA data (excludes incomplete listings)")
+MULTIPACK = typer.Option(False, "--exclude-multipack", "--multipack", help="Exclude multipacks (pack quantity > 1)")
+VARIATIONS = typer.Option(False, "--exclude-variations", "--variations", help="Exclude listings with variations")
+HAZMAT = typer.Option(False, "--exclude-hazmat", "--hazmat", help="Exclude hazmat products")
+SUPPRESSED_BUYBOX = typer.Option(False, "--exclude-suppressed-buybox", "--suppressed-buybox", help="Exclude suppressed-buybox listings")
 SIZE = typer.Option(None, help="Size category code, e.g. SML_PAR (repeatable)")
 CATEGORY = typer.Option(None, help="Amazon category code (repeatable)")
 SIMILARITY = typer.Option(None, help="Match similarity level (0-3)")
@@ -88,7 +88,12 @@ PROFIT_MONTH_LOGIC = typer.Option(None, "--profit-month-logic", help=LOGIC_HELP)
 SALES_MONTH_MIN = typer.Option(None, "--sales-month-min", help="Min monthly sales")
 SALES_MONTH_MAX = typer.Option(None, "--sales-month-max", help="Max monthly sales")
 SALES_MONTH_LOGIC = typer.Option(None, "--sales-month-logic", help=LOGIC_HELP)
-SORT = typer.Option(None, help="Sort key, e.g. profit, -profit, identifiers")
+SORT = typer.Option(
+    None,
+    help="Sort key, e.g. profit, -profit ('-' = descending). Keys: identifiers, "
+         "store_image, store_price, price, amazon_price, profit, roi, margin, "
+         "sales_rank, profit_month, sales_month, last_scan, last_update",
+)
 
 
 @products_app.command("search")
