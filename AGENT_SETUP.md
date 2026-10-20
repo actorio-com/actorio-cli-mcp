@@ -4,11 +4,16 @@ How to give a coding agent (Claude Code, Codex, or any MCP-capable assistant)
 access to Actorio's product search, reverse lookup, Amazon Flip, and export
 capabilities.
 
+> **Using claude.ai, the Claude Desktop app or Cowork?** You don't need any of
+> this. Add the hosted remote connector instead: **Settings → Connectors → Add
+> custom connector**, URL `https://clitest.actorio.com/mcp` (temporary test
+> instance), then sign in to Actorio when prompted. See the
+> [README](README.md#connect-to-claude-claudeai-claude-desktop-cowork) for details.
+
 ## Prerequisites
 
 - **Python 3.10+** and **pipx** (install with `brew install pipx` on macOS, or
   `pip install pipx` elsewhere)
-- **Git** — the package is installed directly from the repository, not PyPI
 - A **web browser** with an active Actorio login (for the one-time device-code
   auth flow)
 - For Claude Code specifically: version 1.0.0 or later (MCP support is built
@@ -17,7 +22,7 @@ capabilities.
 ## 1. Install the CLI
 
 ```bash
-pipx install "git+https://github.com/actorio-com/actorio-cli-mcp.git"
+pipx install actorio-cli
 ```
 
 This installs all dependencies (`typer`, `rich`, `httpx`, `mcp`, `starlette`,
@@ -68,9 +73,19 @@ Once configured, the agent can call `search_products`, `reverse_lookup`,
 
 ### Claude Code
 
-Add an MCP server entry. The exact location depends on your setup:
+Register the server with the `claude mcp add` command:
 
-**Per-project** (`.claude/mcp.json` in the repo root):
+```bash
+# Available in all your projects
+claude mcp add actorio --scope user -- actorio mcp
+
+# Or only for the current project (writes .mcp.json in the repo root,
+# which you can commit so teammates get it too)
+claude mcp add actorio --scope project -- actorio mcp
+```
+
+The project-scoped `.mcp.json` looks like this if you prefer to write it by
+hand:
 
 ```json
 {
@@ -83,21 +98,30 @@ Add an MCP server entry. The exact location depends on your setup:
 }
 ```
 
-**Per-user** (`~/.claude/mcp.json` — available to all your sessions):
+Start a new Claude Code session, then run `/mcp` to confirm that `actorio`
+shows as connected.
+
+### Claude Desktop (local server)
+
+Most Claude Desktop users should use the remote connector described at the top
+of this guide, which also works in Cowork. To run the local stdio server
+instead, edit `claude_desktop_config.json` (macOS:
+`~/Library/Application Support/Claude/`, Windows: `%APPDATA%\Claude\`). Use
+the **absolute** path from `which actorio`, because the desktop app doesn't
+inherit your shell `PATH`:
 
 ```json
 {
   "mcpServers": {
     "actorio": {
-      "command": "actorio",
+      "command": "/Users/you/.local/bin/actorio",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-If you installed via pipx and `actorio` is on your PATH, this is all you
-need. Restart Claude Code or reload the MCP servers (`/mcp reload`).
+Fully quit and reopen Claude Desktop after editing.
 
 ### Codex (OpenAI)
 
@@ -235,6 +259,10 @@ Then restart your shell.
 **`actorio login` fails with "Could not resolve host"**
 Check the `--base-url` value with your admin. If you're on a VPN or behind a
 corporate proxy, set `HTTPS_PROXY` / `HTTP_PROXY`.
+
+**Claude Desktop says the server failed to start, but `actorio mcp` works in a terminal**
+The desktop app couldn't find `actorio` on its `PATH`. Put the absolute path
+from `which actorio` in `command`.
 
 **Agent says "No tools found" or "MCP server failed to start"**
 Run `actorio mcp` directly in a terminal. If it exits immediately with an
