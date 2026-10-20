@@ -149,20 +149,63 @@ machine-readable output — this is the format MCP tools and any scripting use.
 JSON output includes both `results` and `pagination` (with `total`, `page`,
 `per_page`, and `has_more`).
 
-## MCP setup for Claude Desktop
+## Connect to Claude (claude.ai, Claude Desktop, Cowork)
 
-Add an entry to your Claude Desktop `mcp.json`:
+> **Note:** `clitest.actorio.com` is a temporary test instance — the connector
+> URL will move to the production API in the future.
+
+The easiest way to use Actorio from Claude is the hosted remote connector. You
+don't need to install anything, and it works in claude.ai, the Claude Desktop
+app, **Cowork** and the mobile apps:
+
+1. In Claude, open **Settings → Connectors** and choose **Add custom connector**.
+2. Name it `Actorio` and set the URL to:
+   ```
+   https://clitest.actorio.com/mcp
+   ```
+   Leave the OAuth Client ID/Secret fields under *Advanced settings* empty.
+   Claude registers itself automatically.
+3. Click **Connect**. Actorio's login page opens. Sign in, review the access
+   request and choose **Approve**.
+4. In a chat or Cowork task, enable **Actorio** from the tools/connectors menu.
+
+On Team and Enterprise plans, an organization owner may need to add the
+custom connector first (Organization settings → Connectors) before members
+can connect it. You can revoke access at any time from the Connected Apps page in your
+Actorio account, or by removing the connector in Claude.
+
+The remote connector bills against your own Actorio plan and credits. It
+needs no `actorio login`.
+
+## Local MCP server (Claude Code, Claude Desktop config, other agents)
+
+To run the server locally over stdio, log in with `actorio login` first and
+then point your client at `actorio mcp`.
+
+**Claude Code:**
+
+```bash
+claude mcp add actorio --scope user -- actorio mcp
+```
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`
+on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows). Desktop
+apps don't inherit your shell `PATH`, so use the absolute path from
+`which actorio` (with pipx this is usually `~/.local/bin/actorio`):
 
 ```json
 {
   "mcpServers": {
     "actorio": {
-      "command": "actorio",
+      "command": "/Users/you/.local/bin/actorio",
       "args": ["mcp"]
     }
   }
 }
 ```
+
+Restart Claude Desktop after editing the file. For Cowork, use the remote
+connector described above.
 
 The MCP server exposes these tools, each mirroring the parameters of the
 matching CLI command (including all advanced filters):
