@@ -62,6 +62,13 @@ class Client:
         )
         return self._handle(resp)
 
+    def me(self) -> dict:
+        resp = self._http.get(
+            f"{self.base_url}/cli/v1/me",
+            headers=self._headers(),
+        )
+        return self._handle(resp)
+
     def usage(self) -> dict:
         resp = self._http.get(
             f"{self.base_url}/cli/v1/usage",

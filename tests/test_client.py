@@ -387,3 +387,11 @@ def test_client_no_token_omits_auth_header():
     )
     Client(base_url=BASE, token=None).device_start(label="test")
     assert "authorization" not in route.calls[0].request.headers
+
+
+@respx.mock
+def test_me():
+    respx.get(f"{BASE}/cli/v1/me").mock(
+        return_value=httpx.Response(200, json={"username": "alice"})
+    )
+    assert make_client().me() == {"username": "alice"}
