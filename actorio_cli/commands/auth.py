@@ -1,6 +1,7 @@
 import socket
 import time
 import webbrowser
+import httpx
 import typer
 from actorio_cli.client import Client, ApiError
 from actorio_cli.config import Config, load_config, save_config
@@ -59,4 +60,27 @@ def whoami():
         typer.echo("Not logged in. Run `actorio login`.", err=True)
         raise typer.Exit(1)
     typer.echo(f"Base URL: {cfg.base_url}")
-    typer.echo(f"Token label: {cfg.token_label}")
+    try:
+        me = Client(base_url=cfg.base_url, token=cfg.token).me()
+    except ApiError as e:
+        if e.status == 401:
+            typer.echo(f"Token label: {cfg.token_label}")
+            typer.echo("Token is invalid or revoked. Run `actorio login`.", err=True)
+            raise typer.Exit(1)
+        # e.g. 404 from a server that predates /cli/v1/me
+        typer.echo(f"Token label: {cfg.token_label}")
+        typer.echo(f"User: unknown (server error: {e})", err=True)
+        return
+    except httpx.HTTPError as e:
+        typer.echo(f"Token label: {cfg.token_label}")
+        typer.echo(f"User: unknown (could not reach server: {e})", err=True)
+        return
+    user = me["username"]
+    if me.get("email") and me["email"].lower() != user.lower():
+        user += f" <{me['email']}>"
+    typer.echo(f"User: {user}")
+    typer.echo(f"Token label: {me.get('token_label') or cfg.token_label}")
+    searches = me.get("searches") or {}
+    if searches:
+        allowed = [k for k, ok in searches.items() if ok]
+        typer.echo(f"Searches: {', '.join(allowed) if allowed else 'none'}")

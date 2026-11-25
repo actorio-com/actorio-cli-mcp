@@ -38,12 +38,68 @@ def test_whoami_not_logged_in(isolated_config_path):
     assert "login" in result.output.lower()
 
 
-def test_whoami_logged_in(isolated_config_path):
+def _save_login():
     from actorio_cli.config import save_config
     save_config(Config(base_url="https://a", token="act_t", token_label="laptop"))
+
+
+@patch("actorio_cli.commands.auth.Client")
+def test_whoami_logged_in(mock_client_cls, isolated_config_path):
+    _save_login()
+    mock_client_cls.return_value.me.return_value = {
+        "username": "alice", "email": "alice@example.com",
+        "token_label": "laptop",
+        "searches": {"products": True, "favorites": True,
+                     "amazon": False, "reverse": False},
+    }
+    result = runner.invoke(app, ["whoami"])
+    assert result.exit_code == 0, result.output
+    assert "User: alice <alice@example.com>" in result.output
+    assert "Token label: laptop" in result.output
+    assert "Searches: products, favorites" in result.output
+
+
+@patch("actorio_cli.commands.auth.Client")
+def test_whoami_email_username_not_repeated(mock_client_cls, isolated_config_path):
+    _save_login()
+    mock_client_cls.return_value.me.return_value = {
+        "username": "a@example.com", "email": "a@example.com", "searches": {},
+    }
+    result = runner.invoke(app, ["whoami"])
+    assert "User: a@example.com\n" in result.output
+
+
+@patch("actorio_cli.commands.auth.Client")
+def test_whoami_revoked_token(mock_client_cls, isolated_config_path):
+    from actorio_cli.client import ApiError
+    _save_login()
+    mock_client_cls.return_value.me.side_effect = ApiError(
+        code="unknown", message="Invalid or revoked token", status=401)
+    result = runner.invoke(app, ["whoami"])
+    assert result.exit_code == 1
+    assert "actorio login" in result.output
+
+
+@patch("actorio_cli.commands.auth.Client")
+def test_whoami_old_server_falls_back_to_local_info(mock_client_cls, isolated_config_path):
+    from actorio_cli.client import ApiError
+    _save_login()
+    mock_client_cls.return_value.me.side_effect = ApiError(
+        code="unknown", message="Not Found", status=404)
     result = runner.invoke(app, ["whoami"])
     assert result.exit_code == 0
-    assert "laptop" in result.output
+    assert "Token label: laptop" in result.output
+    assert "User: unknown" in result.output
+
+
+@patch("actorio_cli.commands.auth.Client")
+def test_whoami_server_unreachable(mock_client_cls, isolated_config_path):
+    import httpx
+    _save_login()
+    mock_client_cls.return_value.me.side_effect = httpx.ConnectError("boom")
+    result = runner.invoke(app, ["whoami"])
+    assert result.exit_code == 0
+    assert "could not reach server" in result.output
 
 
 def test_logout_removes_config(isolated_config_path):

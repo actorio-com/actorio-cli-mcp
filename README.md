@@ -81,7 +81,7 @@ returns every field the backend has for each row.
   ```bash
   actorio logout
   ```
-- `actorio whoami` — print the stored base URL, token label, and username.
+- `actorio whoami` — print the base URL, your username and email, the token label, and which searches your account can run.
   ```bash
   actorio whoami
   ```
